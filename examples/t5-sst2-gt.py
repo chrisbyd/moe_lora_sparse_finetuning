@@ -31,8 +31,15 @@ def change_forward(model, k=20):
             hidden_states_relu = hidden_states.clone()
             hidden_states_relu = hidden_states_relu.view(-1, hidden_size)
             score = torch.matmul(hidden_states_relu, ffn_self.patterns.transpose(0, 1))
-            labels = torch.topk(score, k=k, dim=-1)[1].view(bsz, seq_len, k)
-            cur_mask = torch.nn.functional.embedding(labels, ffn_self.patterns).sum(-2)
+            labels = torch.topk(score, k=k, dim=-1)[1].view(bsz, seq_len, k) # (B, L, k)
+            cur_mask = torch.nn.functional.embedding(labels, ffn_self.patterns).sum(-2) 
+            # 解释：
+            #   ffn_self.patterns:   (128, 3072)
+            #   labels              (B, L, k)
+            # → embedding(labels, patterns) → (B, L, k, 3072)
+            #   每个 labels[b,t,i] 会索引 patterns[expert_idx]，得到该 expert 对应的布尔行 (3072,)
+            # .sum(-2) 会沿 k 维求和，得到 (B, L, 3072)，
+            # 当某个维度在任一 expert 中出现，就 ≥1，否则为0
             hidden_states[cur_mask == False] = 0  
              
         hidden_states = ffn_self.dropout(hidden_states)

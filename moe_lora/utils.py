@@ -117,3 +117,10 @@ class LayerSplit:
         self.neuron_num = self.ffn_weight.shape[0]
         self.split_size = self.neuron_num // self.config.split_num
         assert self.split_size * self.config.split_num == self.neuron_num
+
+def load_ffn_weight(filename, template, layer):
+
+    model = torch.load(filename, map_location='cpu')
+    key = template.format(layer)
+
+    return model[key].numpy()
